@@ -3,33 +3,42 @@ using UnityEngine.InputSystem;
 
 public class PlayerMovement : MonoBehaviour
 {
-    private Vector2 moveInput;
     private Rigidbody2D rb;
     private InputAction moveAction;
     private InputAction jumpAction;
     [SerializeField] private float jumpForce = 10f;
-    [SerializeField] private float maxSpeed = 7f;
-    [SerializeField] private float accelerationCurve = 17f;
-    [SerializeField] private float stoppingForce = 15f; // Сила торможения
+    [SerializeField] private float moveSpeed = 7f;
+    [SerializeField] private float acceleration = 17f;
+    private float currentHorizontalSpeed = 0f;
 
+    [Range(0f, 1f)]
+    [SerializeField] private float jumpCutMultiplier = 1f;
     void Start()
     {
         jumpAction = InputSystem.actions.FindAction("Jump");
         moveAction = InputSystem.actions.FindAction("Move");
         jumpAction.performed += JumpAction_performed;
+        jumpAction.canceled += JumpAction_canceled;
         rb = GetComponent<Rigidbody2D>();
         if (moveAction == null)
             Debug.LogError("Move action not found!");
         if (rb == null)
             Debug.LogError("Rigidbody2D not found!");
+        moveAction.Enable();
     }
 
-    private void JumpAction_performed(InputAction.CallbackContext obj)
+    private void JumpAction_performed(InputAction.CallbackContext context)
     {
-        rb.AddForce(Vector2.up * jumpForce,ForceMode2D.Impulse);
+        rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f);
+        rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
     }
-
-    // Update is called once per frame
+    private void JumpAction_canceled(InputAction.CallbackContext context)
+    {
+        if (rb.linearVelocity.y > 0f)
+        {
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, rb.linearVelocity.y * jumpCutMultiplier);
+        }
+    }
     void Update()
     {
 
@@ -38,50 +47,9 @@ public class PlayerMovement : MonoBehaviour
     {
         if (moveAction == null) return;
 
-        moveInput = moveAction.ReadValue<Vector2>();
-
-        if (moveInput.magnitude > 0.01f)
-        {
-
-            // Нормализуем ввод
-            Vector2 inputDirection = moveInput.normalized;
-
-            // Преобразуем в мировое направление с учётом поворота объекта
-            Vector2 moveDirection = (transform.right * inputDirection.x);
-
-            // Получаем текущую скорость в направлении движения
-            float currentSpeedInDirection = Vector2.Dot(rb.linearVelocity, moveDirection);
-
-            // Вычисляем целевую скорость по кривой
-            float targetSpeed;
-            if (currentSpeedInDirection <= 0.01f)
-            {
-                targetSpeed = Mathf.Sqrt(accelerationCurve * Time.fixedDeltaTime);
-            }
-            else
-            {
-                targetSpeed = Mathf.Sqrt(accelerationCurve * currentSpeedInDirection);
-            }
-
-            targetSpeed = Mathf.Min(targetSpeed, maxSpeed);
-
-            // Вычисляем желаемую скорость
-            Vector2 desiredVelocity = moveDirection * targetSpeed;
-
-            // Применяем силу для достижения желаемой скорости
-            Vector2 force = (desiredVelocity - rb.linearVelocity) * accelerationCurve;
-            rb.AddForce(force, ForceMode2D.Force);
-
-            // Ограничиваем максимальную скорость (на случай слишком большой силы)
-            if (rb.linearVelocity.magnitude > maxSpeed)
-            {
-                rb.linearVelocity = rb.linearVelocity.normalized * maxSpeed;
-            }
-        }
-        else
-        {
-            // Торможение с помощью силы
-            rb.AddForce(-rb.linearVelocity * stoppingForce, ForceMode2D.Force);
-        }
+        float moveInput = moveAction.ReadValue<float>();
+        float targetSpeed = moveInput * moveSpeed;
+        currentHorizontalSpeed = Mathf.MoveTowards(currentHorizontalSpeed, targetSpeed, acceleration * Time.fixedDeltaTime);
+        rb.linearVelocity = new Vector2(currentHorizontalSpeed, rb.linearVelocity.y);
     }
 }
