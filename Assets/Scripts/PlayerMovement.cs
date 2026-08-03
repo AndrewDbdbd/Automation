@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using Unity.VisualScripting;
+using UnityEditor.ShaderKeywordFilter;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -24,7 +25,13 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float bufferDuration = 0.2f;
     [SerializeField] private float coyoteDuration = 0.5f;
     [SerializeField] private GameObject GroundCheckPoint;
+    [SerializeField] private BackpackLogic backpackLogic;
+    [SerializeField] private float jumpWaterCost = 5f;
+    [SerializeField] private float walkWaterCost= 5f;
     private float coyoteTimeCounter = 0f;
+    private bool isFacingRight;
+    private float count = 1;
+    private bool isJumping = false;
     void Start()
     {
         jumpAction = InputSystem.actions.FindAction("Jump");
@@ -39,14 +46,17 @@ public class PlayerMovement : MonoBehaviour
             Debug.LogError("Rigidbody2D not found!");
         coyoteTimed = true;
         moveAction.Enable();
+        isFacingRight = true;
     }
 
     private void JumpAction_performed(InputAction.CallbackContext context)
     {
-        if (IsGrounded()||coyoteTimed)
+        if (IsGrounded()|| (coyoteTimed && coyoteTimeCounter > 0f))
         {
-            //Debug.Log(IsGrounded() +" "+ coyoteTimed);
+            //Debug.Log(IsGrounded() +" "+ coyoteTimed+" "+coyoteTimeCounter ); 
             coyoteTimeCounter = 0f;
+            coyoteTimed = false;
+            isJumping = true;
             Jump();
         }
         else if (!isBuffered)
@@ -59,6 +69,7 @@ public class PlayerMovement : MonoBehaviour
     {
         if (rb.linearVelocity.y > 0f)
         {
+            isJumping = false;
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, rb.linearVelocity.y * jumpCutMultiplier);
         }
     }
@@ -66,28 +77,49 @@ public class PlayerMovement : MonoBehaviour
     {
         rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f);
         rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
+        backpackLogic.Decrease(jumpWaterCost);
     }
     void FixedUpdate()
     {
         if (moveAction == null) return;
 
+
         float moveInput = moveAction.ReadValue<float>();
         float targetSpeed = moveInput * moveSpeed;
+        if ((moveInput > 0) != (transform.localScale.x > 0)&& Math.Abs(moveInput) > 0.1f)
+        {
+            transform.localScale = new Vector3(-transform.localScale.x, transform.localScale.y, transform.localScale.z);
+        }
+        if (Mathf.Abs(moveInput) > 0.1f && IsGrounded())
+        {
+            float walkCostThisFrame = Mathf.Abs(moveInput) * walkWaterCost * Time.fixedDeltaTime;
+            backpackLogic.Decrease(walkCostThisFrame);
+        }
+        if (isJumping && rb.linearVelocity.y > 0.1f)
+        {
+            float jumpHoldCostThisFrame = jumpWaterCost * Time.fixedDeltaTime;
+            backpackLogic.Decrease(jumpHoldCostThisFrame);
+        }
         currentHorizontalSpeed = Mathf.MoveTowards(currentHorizontalSpeed, targetSpeed, acceleration * Time.fixedDeltaTime);
         rb.linearVelocity = new Vector2(currentHorizontalSpeed, rb.linearVelocity.y);
+
     }
     private void Update()
     {
-        if (IsGrounded()) coyoteTimeCounter = coyoteDuration;
-        else coyoteTimeCounter -= Time.deltaTime;
-
-
-        if (coyoteTimeCounter > 0f)
+        isJumping = !IsGrounded();
+        if (IsGrounded() && rb.linearVelocity.y <= 0.1f)
         {
+            coyoteTimeCounter = coyoteDuration;
             coyoteTimed = true;
-
         }
-        else { coyoteTimed = false; }
+        else
+        {
+            coyoteTimeCounter -= Time.deltaTime;
+            if (coyoteTimeCounter <= 0f)
+            {
+                coyoteTimed = false;
+            }
+        }
     }
     IEnumerator BufferTimer()
     {
@@ -108,7 +140,7 @@ public class PlayerMovement : MonoBehaviour
 
         isBuffered = false;
     }
-    bool IsGrounded() 
+    bool IsGrounded()
     {
         return bc.IsTouchingLayers(whatIsGround);
     }
