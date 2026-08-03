@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -16,13 +17,14 @@ public class PlayerMovement : MonoBehaviour
     private float currentHorizontalSpeed = 0f;
 
     public LayerMask whatIsGround;
-    private bool isGrounded;
     private bool isBuffered = false;
-    private float timePassed = 0f;
-
+    private bool coyoteTimed = false;
     [Range(0f, 1f)]
     [SerializeField] private float jumpCutMultiplier = 1f;
     [SerializeField] private float bufferDuration = 0.2f;
+    [SerializeField] private float coyoteDuration = 0.5f;
+    [SerializeField] private GameObject GroundCheckPoint;
+    private float coyoteTimeCounter = 0f;
     void Start()
     {
         jumpAction = InputSystem.actions.FindAction("Jump");
@@ -30,24 +32,26 @@ public class PlayerMovement : MonoBehaviour
         jumpAction.performed += JumpAction_performed;
         jumpAction.canceled += JumpAction_canceled;
         rb = GetComponent<Rigidbody2D>();
-        bc = GetComponent<BoxCollider2D>();
+        bc = GroundCheckPoint.GetComponent<BoxCollider2D>();
         if (moveAction == null)
             Debug.LogError("Move action not found!");
         if (rb == null)
             Debug.LogError("Rigidbody2D not found!");
+        coyoteTimed = true;
         moveAction.Enable();
     }
 
     private void JumpAction_performed(InputAction.CallbackContext context)
     {
-        isGrounded = bc.IsTouchingLayers(whatIsGround);
-        if (isGrounded)
+        if (IsGrounded()||coyoteTimed)
         {
+            //Debug.Log(IsGrounded() +" "+ coyoteTimed);
+            coyoteTimeCounter = 0f;
             Jump();
         }
         else if (!isBuffered)
         {
-            isBuffered= true;
+            isBuffered = true;
             StartCoroutine(BufferTimer());
         }
     }
@@ -63,10 +67,6 @@ public class PlayerMovement : MonoBehaviour
         rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f);
         rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
     }
-    void Update()
-    {
-        //sixseven
-    }
     void FixedUpdate()
     {
         if (moveAction == null) return;
@@ -76,17 +76,29 @@ public class PlayerMovement : MonoBehaviour
         currentHorizontalSpeed = Mathf.MoveTowards(currentHorizontalSpeed, targetSpeed, acceleration * Time.fixedDeltaTime);
         rb.linearVelocity = new Vector2(currentHorizontalSpeed, rb.linearVelocity.y);
     }
+    private void Update()
+    {
+        if (IsGrounded()) coyoteTimeCounter = coyoteDuration;
+        else coyoteTimeCounter -= Time.deltaTime;
+
+
+        if (coyoteTimeCounter > 0f)
+        {
+            coyoteTimed = true;
+
+        }
+        else { coyoteTimed = false; }
+    }
     IEnumerator BufferTimer()
     {
-        timePassed = 0;
+        float timePassed = 0;
         while (timePassed < bufferDuration)
         {
             yield return waitForFixedUpdate;
 
             timePassed += Time.fixedDeltaTime;
 
-            isGrounded = bc.IsTouchingLayers(whatIsGround);
-            if (isGrounded)
+            if (IsGrounded())
             {
                 Jump();
                 isBuffered = false;
@@ -95,6 +107,10 @@ public class PlayerMovement : MonoBehaviour
         }
 
         isBuffered = false;
+    }
+    bool IsGrounded() 
+    {
+        return bc.IsTouchingLayers(whatIsGround);
     }
 
 
