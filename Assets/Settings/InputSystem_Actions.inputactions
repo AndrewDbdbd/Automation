@@ -95,6 +95,16 @@
                     "interactions": "",
                     "initialStateCheck": false,
                     "priority": 0
+                },
+                {
+                    "name": "PauseMenuToggle",
+                    "type": "Button",
+                    "id": "72dbfce1-4dfc-45f9-ab5d-bb77fa008a1e",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false,
+                    "priority": 0
                 }
             ],
             "bindings": [
@@ -403,6 +413,17 @@
                     "processors": "",
                     "groups": "Keyboard&Mouse",
                     "action": "Crouch",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "783d0b74-ed88-463d-bfa6-bc6b16b48579",
+                    "path": "<Keyboard>/escape",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "PauseMenuToggle",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

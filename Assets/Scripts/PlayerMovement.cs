@@ -7,6 +7,7 @@ using UnityEngine.InputSystem;
 
 public class PlayerMovement : MonoBehaviour
 {
+    public static PlayerMovement instance;
     private readonly WaitForFixedUpdate waitForFixedUpdate = new WaitForFixedUpdate();
     private Rigidbody2D rb;
     private BoxCollider2D bc;
@@ -32,6 +33,7 @@ public class PlayerMovement : MonoBehaviour
     private bool isFacingRight;
     private float count = 1;
     private bool isJumping = false;
+    private void Awake() => instance = this;
     void Start()
     {
         jumpAction = InputSystem.actions.FindAction("Jump");
