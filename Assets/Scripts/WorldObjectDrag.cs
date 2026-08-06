@@ -40,9 +40,28 @@ public class WorldObjectDrag : MonoBehaviour
             {
                 TrySelectObject();
             }
+            if (Mouse.current.rightButton.wasPressedThisFrame)
+            {
+                TryDeleteObject();
+            }
         }
     }
+    private void TryDeleteObject()
+    {
+        Vector2 mouseScreenPos = Mouse.current.position.ReadValue();
+        Vector3 mouseWorldPos = mainCamera.ScreenToWorldPoint(mouseScreenPos);
 
+        RaycastHit2D hit = Physics2D.Raycast(mouseWorldPos, Vector2.zero);
+
+        if (hit.collider != null && hit.collider.gameObject == gameObject)
+        {
+            Deleting();
+        }
+    }
+    private void Deleting() 
+    {
+        Destroy(this.gameObject);
+    }
     private void TrySelectObject()
     {
         Vector2 mouseScreenPos = Mouse.current.position.ReadValue();

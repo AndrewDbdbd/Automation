@@ -11,10 +11,23 @@ public class PauseMenu : MonoBehaviour
     {
         pauseAction = InputSystem.actions.FindAction("PauseMenuToggle");
 
-
         pauseAction.performed += pauseAction_performed;
+
         if (pauseAction == null)
             Debug.LogError("Pause action not found!");
+    }
+
+    private void OnEnable()
+    {
+        if (pauseAction == null) return;
+
+        pauseAction.Enable();
+        pauseAction.performed += pauseAction_performed;
+    }
+    private void OnDisable()
+    {
+        if (pauseAction == null) return;
+        pauseAction.performed -= pauseAction_performed;
     }
     private void pauseAction_performed(InputAction.CallbackContext context)
     {
@@ -30,19 +43,15 @@ public class PauseMenu : MonoBehaviour
     }
     public void Resume()
     {
-
+        Cursor.lockState = CursorLockMode.Locked;
         pauseMenuUI.SetActive(false);
         Time.timeScale = 1f;
     }
     public void Pause()
     {
+        Cursor.lockState = CursorLockMode.None;
         pauseMenuUI.SetActive(true);
         Time.timeScale = 0f;
     }
 
-    public void GoToBuildMode()
-    {
-        Time.timeScale = 1f; 
-        SceneManager.LoadScene("BuildSceneName"); 
-    }
 }
