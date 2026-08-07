@@ -7,6 +7,7 @@ using UnityEngine.InputSystem;
 
 public class PlayerMovement : MonoBehaviour
 {
+    public static PlayerMovement instance;
     private readonly WaitForFixedUpdate waitForFixedUpdate = new WaitForFixedUpdate();
     private Rigidbody2D rb;
     private BoxCollider2D bc;
@@ -32,6 +33,7 @@ public class PlayerMovement : MonoBehaviour
     private bool isFacingRight;
     private float count = 1;
     private bool isJumping = false;
+    private void Awake() => instance = this;
     void Start()
     {
         jumpAction = InputSystem.actions.FindAction("Jump");
@@ -48,7 +50,18 @@ public class PlayerMovement : MonoBehaviour
         moveAction.Enable();
         isFacingRight = true;
     }
-
+    private void OnEnable()
+    {
+        if (jumpAction == null) return;
+        jumpAction.performed += JumpAction_performed;
+        jumpAction.canceled += JumpAction_canceled;
+    }
+    private void OnDisable()
+    {
+        if (jumpAction == null) return;
+        jumpAction.performed -= JumpAction_performed;
+        jumpAction.canceled -= JumpAction_canceled;
+    }
     private void JumpAction_performed(InputAction.CallbackContext context)
     {
         if (IsGrounded()|| (coyoteTimed && coyoteTimeCounter > 0f))
@@ -81,6 +94,7 @@ public class PlayerMovement : MonoBehaviour
     }
     void FixedUpdate()
     {
+        Debug.Log(1231231);
         if (moveAction == null) return;
 
 
